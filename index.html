@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stock Vapers</title>
+<style>
+  :root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+    /* owner (dark, contable) */
+    --o-bg: #0e1013; --o-surface: #181b20; --o-surface-2: #20242b; --o-line: #2a2f38;
+    --o-text: #eef1f4; --o-muted: #8d95a3;
+    --o-mint: #6fe7c9; --o-mint-dim: #3a5f56;
+    --o-berry: #ff5c86; --o-berry-dim: #5c3140;
+    --o-amber: #ffb84d; --o-amber-dim: #5c4a2a;
+    --o-danger: #ff6b6b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; min-height: 100vh; overflow-x: hidden; }
+  button, input, select { font-family: inherit; }
+
+  /* ============ OWNER MODE ============ */
+  #ownerView { background: var(--o-bg); color: var(--o-text); min-height: 100vh; padding-bottom: calc(88px + var(--safe-bottom)); }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 8px; }
+
+  header.top { display: flex; align-items: flex-start; justify-content: space-between; padding: 4px 2px 18px; }
+  header.top h1 { font-size: 21px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  header.top .dot { color: var(--o-mint); }
+  header.top .sub { font-size: 12.5px; color: var(--o-muted); margin-top: 3px; }
+  .icon-row { display: flex; gap: 8px; }
+  .icon-btn {
+    background: var(--o-surface); border: 1px solid var(--o-line); color: var(--o-muted);
+    min-width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; cursor: pointer; padding: 0 10px; font-weight: 600; gap: 6px;
+  }
+
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .stat { background: var(--o-surface); border: 1px solid var(--o-line); border-radius: 14px; padding: 14px 14px 12px; }
+  .stat .label { font-size: 12px; color: var(--o-muted); margin-bottom: 6px; }
+  .stat .value { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat.profit .value.pos { color: var(--o-mint); }
+  .stat.profit .value.neg { color: var(--o-danger); }
+  .stat.units .value { color: var(--o-amber); }
+  .invest-breakdown { font-size: 11.5px; color: var(--o-muted); padding: 10px 4px 18px; }
+  .invest-breakdown b { color: var(--o-text); font-weight: 600; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 4px; }
+  .tab-btn { flex: 1; background: var(--o-surface); border: 1px solid var(--o-line); color: var(--o-muted); padding: 9px 4px; border-radius: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .tab-btn.active { background: var(--o-mint-dim); color: var(--o-mint); border-color: transparent; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--o-muted); margin: 20px 2px 10px; display: flex; align-items: center; justify-content: space-between; }
+  .section-title button { background: none; border: none; color: var(--o-mint); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 0; }
+
+  .flavor-list, .expense-list { display: flex; flex-direction: column; gap: 8px; }
+  .flavor-row {
+    background: var(--o-surface); border: 1px solid var(--o-line); border-radius: 12px;
+    padding: 11px 13px; display: flex; align-items: center; gap: 11px; cursor: pointer;
+  }
+  .flavor-row:active { background: var(--o-surface-2); }
+  .fchip { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .flavor-row .fname { flex: 1; min-width: 0; }
+  .flavor-row .fname .n { font-size: 14px; font-weight: 600; line-height: 1.25; }
+  .flavor-row .fname .m { font-size: 11px; color: var(--o-muted); margin-top: 2px; }
+  .flavor-row .fname .m .prof-pos { color: var(--o-mint); font-weight: 600; }
+  .flavor-row .fname .m .prof-neg { color: var(--o-danger); font-weight: 600; }
+  .flavor-row .stock-pill { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 5px 9px; border-radius: 20px; white-space: nowrap; background: var(--o-mint-dim); color: var(--o-mint); }
+  .flavor-row .stock-pill.low { background: var(--o-amber-dim); color: var(--o-amber); }
+  .flavor-row .stock-pill.out { background: var(--o-berry-dim); color: var(--o-berry); }
+
+  .expense-row { background: var(--o-surface); border: 1px solid var(--o-line); border-radius: 12px; padding: 11px 13px; display: flex; align-items: center; gap: 10px; }
+  .expense-row .en { flex: 1; font-size: 13.5px; font-weight: 600; }
+  .expense-row .ed { font-size: 11px; color: var(--o-muted); margin-top: 2px; }
+  .expense-row .ev { font-size: 14px; font-weight: 700; color: var(--o-amber); font-variant-numeric: tabular-nums; }
+  .row-del { background: none; border: none; color: var(--o-danger); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px 2px; }
+
+  .empty-note { color: var(--o-muted); font-size: 13px; text-align: center; padding: 20px 10px; line-height: 1.5; }
+
+  .history-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--o-line); }
+  .history-item:last-child { border-bottom: none; }
+  .history-item .hn { font-size: 13.5px; font-weight: 600; }
+  .history-item .hm { font-size: 11.5px; color: var(--o-muted); margin-top: 2px; }
+  .history-item .hv { font-size: 13.5px; font-weight: 700; color: var(--o-mint); text-align: right; white-space: nowrap; }
+  .history-item .hv .qty { color: var(--o-muted); font-weight: 500; font-size: 11.5px; display: block; }
+
+  .fab { position: fixed; right: 18px; bottom: calc(20px + var(--safe-bottom)); background: var(--o-mint); color: #0e1013; border: none; border-radius: 30px; padding: 14px 20px; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 24px rgba(111,231,201,0.28); cursor: pointer; z-index: 20; }
+  .fab:active { transform: scale(0.97); }
+
+  /* Sheets (owner) */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 40; display: none; align-items: flex-end; justify-content: center; }
+  .overlay.show { display: flex; }
+  .sheet { background: var(--o-surface); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 18px calc(22px + var(--safe-bottom)); max-height: 90vh; overflow-y: auto; animation: slideup 0.22s ease-out; }
+  @keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet-handle { width: 36px; height: 4px; background: var(--o-line); border-radius: 4px; margin: 0 auto 16px; }
+  .sheet h2 { font-size: 17px; margin: 0 0 4px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .sheet .sheet-sub { font-size: 12px; color: var(--o-muted); margin-bottom: 16px; }
+
+  label.field { display: block; margin-bottom: 14px; }
+  label.field .lbl { font-size: 12.5px; color: var(--o-muted); margin-bottom: 6px; display: block; }
+  select, input[type=number], input[type=text] {
+    width: 100%; background: var(--o-surface-2); border: 1px solid var(--o-line); color: var(--o-text);
+    padding: 12px 13px; border-radius: 10px; font-size: 15.5px; font-family: inherit; -webkit-appearance: none; appearance: none;
+  }
+  select:focus, input:focus { outline: 2px solid var(--o-mint); outline-offset: 1px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hint { font-size: 12px; color: var(--o-muted); margin-top: -8px; margin-bottom: 14px; }
+  .hint.warn { color: var(--o-danger); }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 6px; }
+  button.primary { flex: 1; background: var(--o-mint); color: #0e1013; border: none; border-radius: 12px; padding: 14px; font-size: 15.5px; font-weight: 700; cursor: pointer; }
+  button.primary:disabled { opacity: 0.4; }
+  button.secondary { background: var(--o-surface-2); color: var(--o-text); border: 1px solid var(--o-line); border-radius: 12px; padding: 14px 18px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button.danger-block { width: 100%; background: var(--o-berry-dim); color: var(--o-berry); border: none; border-radius: 12px; padding: 13px; font-size: 14.5px; font-weight: 700; cursor: pointer; margin-top: 4px; }
+
+  .fd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .fd-stats .fs { background: var(--o-surface-2); border-radius: 10px; padding: 10px 11px; }
+  .fd-stats .fs .l { font-size: 10.5px; color: var(--o-muted); }
+  .fd-stats .fs .v { font-size: 15px; font-weight: 700; margin-top: 2px; }
+
+  .purchase-add { background: var(--o-surface-2); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+  .purchase-add .pt { font-size: 12.5px; font-weight: 700; color: var(--o-mint); margin-bottom: 10px; }
+  .purchase-list { max-height: 180px; overflow-y: auto; margin-bottom: 4px; }
+  .purchase-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--o-line); font-size: 12.5px; }
+  .purchase-item:last-child { border-bottom: none; }
+  .purchase-item .pd { color: var(--o-muted); font-size: 11px; }
+  .purchase-item .pv { font-weight: 700; white-space: nowrap; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(90px + var(--safe-bottom)); transform: translateX(-50%); background: var(--o-surface-2); border: 1px solid var(--o-line); color: var(--o-text); padding: 11px 18px; border-radius: 30px; font-size: 13.5px; font-weight: 600; z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  .toast.err { background: var(--o-berry-dim); color: var(--o-berry); border-color: transparent; }
+
+  /* ============ CLIENT MODE ============ */
+  #clientView {
+    display: none; min-height: 100vh; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #FFE8B8 0%, #BDEBF6 45%, #EAF8FF 100%);
+    color: #1c2024; padding-bottom: calc(30px + var(--safe-bottom));
+  }
+  .blob { position: absolute; border-radius: 50%; filter: blur(40px); opacity: 0.55; z-index: 0; }
+  .blob.b1 { width: 220px; height: 220px; background: #FF9E5E; top: -60px; left: -50px; }
+  .blob.b2 { width: 180px; height: 180px; background: #FF6F91; top: -30px; right: -60px; }
+  .blob.b3 { width: 200px; height: 200px; background: #7FE0F0; top: 60px; left: 40%; }
+
+  .client-wrap { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: calc(22px + var(--safe-top)) 16px 10px; }
+  .client-head { text-align: center; margin-bottom: 18px; }
+  .client-head h1 { font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.02em; color: #23272b; }
+  .client-head .sub { font-size: 13px; font-weight: 600; color: #6b5a4a; margin-top: 4px; }
+
+  .client-chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 9px; position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: 0 16px; }
+  .chip { background: #ffffff; border-radius: 14px; padding: 10px 6px 9px; text-align: center; box-shadow: 0 4px 12px rgba(30,30,40,0.08); position: relative; overflow: hidden; }
+  .chip .swatchbar { position: absolute; top: 0; left: 0; right: 0; height: 5px; }
+  .chip .emo { font-size: 19px; margin-top: 7px; }
+  .chip .fn { font-size: 10px; font-weight: 700; line-height: 1.15; margin-top: 4px; min-height: 24px; color: #23272b; }
+  .chip .stockval { font-size: 15px; font-weight: 800; margin-top: 5px; }
+  .chip .stockval.ok { color: #1F9254; }
+  .chip .stockval.low { color: #B4700C; }
+  .chip .stockval.out { color: #A8354A; font-size: 12px; }
+  .chip .stocklabel { font-size: 8px; color: #8b8b8b; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 1px; }
+
+  .client-exit { display: block; margin: 26px auto 0; background: rgba(255,255,255,0.7); border: none; color: #6b5a4a; font-size: 12.5px; font-weight: 700; padding: 10px 18px; border-radius: 30px; position: relative; z-index: 1; cursor: pointer; }
+  .capture-btn {
+    display: block; margin: 14px auto 0; border: none; color: #fff; font-size: 13px; font-weight: 800;
+    padding: 12px 20px; border-radius: 30px; position: relative; z-index: 1; cursor: pointer;
+    background: linear-gradient(135deg, #FF7F50, #FF5C93); box-shadow: 0 6px 16px rgba(255,92,147,0.35);
+  }
+  .capture-btn:active { transform: scale(0.97); }
+
+  /* PIN sheet reused overlay style but light */
+  #overlayPin .sheet, #overlaySettings .sheet { background: var(--o-surface); }
+  .pin-dots { display: flex; gap: 12px; justify-content: center; margin: 10px 0 18px; }
+  .pin-dots span { width: 14px; height: 14px; border-radius: 50%; background: var(--o-surface-2); border: 1px solid var(--o-line); }
+  .pin-dots span.filled { background: var(--o-mint); border-color: var(--o-mint); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .keypad button { background: var(--o-surface-2); border: 1px solid var(--o-line); color: var(--o-text); font-size: 20px; font-weight: 600; padding: 16px 0; border-radius: 12px; cursor: pointer; }
+  .keypad button:active { background: var(--o-line); }
+
+  /* Pantalla de bloqueo */
+  .lock-overlay { position: fixed; inset: 0; background: var(--o-bg); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .lock-card { background: var(--o-surface); border: 1px solid var(--o-line); border-radius: 18px; padding: 30px 22px; max-width: 320px; width: 100%; text-align: center; }
+  .lock-emoji { font-size: 38px; margin-bottom: 6px; }
+  .lock-card h2 { font-size: 18px; margin: 0 0 4px; color: var(--o-text); }
+  .lock-card p { font-size: 12.5px; color: var(--o-muted); margin: 0 0 18px; }
+  .lock-card input { width: 100%; text-align: center; letter-spacing: 2px; }
+  .lock-err { color: var(--o-danger); font-size: 12.5px; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ============ PANTALLA DE BLOQUEO ============ -->
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-card">
+    <div class="lock-emoji">🔒</div>
+    <h2>Acceso privado</h2>
+    <p>Introduce la contraseña para entrar</p>
+    <input type="password" id="lockInput" placeholder="Contraseña" autocomplete="off">
+    <button id="lockSubmit" class="primary" style="width:100%; margin-top:12px;">Entrar</button>
+    <div class="lock-err" id="lockErr" style="display:none;">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- ============ OWNER MODE ============ -->
+<div id="ownerView">
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <h1>Stock<span class="dot">·</span>Vapers</h1>
+        <div class="sub" id="flavorCount">30 sabores</div>
+      </div>
+      <div class="icon-row">
+        <button class="icon-btn" id="settingsBtn">⚙</button>
+        <button class="icon-btn" id="clientModeBtn">👀 Clientes</button>
+      </div>
+    </header>
+
+    <div class="summary-grid">
+      <div class="stat"><div class="label">Total invertido</div><div class="value" id="statInvested">0,00 €</div></div>
+      <div class="stat"><div class="label">Ingresado</div><div class="value" id="statRevenue">0,00 €</div></div>
+      <div class="stat profit"><div class="label">Beneficio</div><div class="value" id="statProfit">0,00 €</div></div>
+      <div class="stat units"><div class="label">Stock restante</div><div class="value" id="statStock">0 uds</div></div>
+    </div>
+    <div class="invest-breakdown" id="investBreakdown">Compras de stock: 0,00 € · Gastos generales: 0,00 €</div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="flavors">Sabores</button>
+      <button class="tab-btn" data-tab="expenses">Gastos</button>
+      <button class="tab-btn" data-tab="history">Ventas</button>
+    </div>
+
+    <div id="tabFlavors">
+      <div class="section-title"><span>Stock y coste por sabor</span><button id="bulkBtn">+ Meter todo de golpe</button></div>
+      <div class="flavor-list" id="flavorList"></div>
+    </div>
+
+    <div id="tabExpenses" style="display:none;">
+      <div class="section-title"><span>Gastos generales</span><button id="addExpenseBtn">+ Añadir</button></div>
+      <div class="expense-list" id="expenseList"></div>
+    </div>
+
+    <div id="tabHistory" style="display:none;">
+      <div class="section-title"><span>Ventas registradas</span></div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <button class="fab" id="fabSell">＋ Registrar venta</button>
+</div>
+
+<!-- ============ CLIENT MODE ============ -->
+<div id="clientView">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="client-wrap">
+    <div class="client-head">
+      <h1>🍓 Nuestros sabores</h1>
+      <div class="sub">Stock disponible</div>
+    </div>
+  </div>
+  <div class="client-chip-grid" id="clientGrid"></div>
+  <button class="capture-btn" id="captureBtn">📸 Captura para enviar a clientes</button>
+  <button class="client-exit" id="clientExitBtn">🔒 Volver</button>
+</div>
+
+<!-- Sheet: registrar venta -->
+<div class="overlay" id="overlaySell">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Registrar venta</h2>
+    <label class="field"><span class="lbl">Sabor</span><select id="sellFlavor"></select></label>
+    <div class="row2">
+      <label class="field"><span class="lbl">Unidades vendidas</span><input type="number" id="sellQty" min="1" step="1" inputmode="numeric" placeholder="1"></label>
+      <label class="field"><span class="lbl">Precio por unidad (€)</span><input type="number" id="sellPrice" min="0" step="0.5" inputmode="decimal" placeholder="8,00"></label>
+    </div>
+    <div class="hint" id="sellStockHint">Stock disponible: —</div>
+    <div class="sheet-actions">
+      <button class="secondary" id="sellCancel">Cancelar</button>
+      <button class="primary" id="sellConfirm">Guardar venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet: detalle de sabor (compras + stock + precio venta) -->
+<div class="overlay" id="overlayFlavor">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="fdTitle">Sabor</h2>
+    <div class="sheet-sub" id="fdSub">—</div>
+
+    <div class="fd-stats">
+      <div class="fs"><div class="l">Stock restante</div><div class="v" id="fdStock">0 uds</div></div>
+      <div class="fs"><div class="l">Coste medio/ud</div><div class="v" id="fdAvgCost">0,00 €</div></div>
+      <div class="fs"><div class="l">Vendidos</div><div class="v" id="fdSold">0 uds</div></div>
+      <div class="fs"><div class="l">Beneficio realizado</div><div class="v" id="fdProfit">0,00 €</div></div>
+    </div>
+
+    <label class="field"><span class="lbl">Precio de venta al público (€)</span><input type="number" id="fdSalePrice" min="0" step="0.5" inputmode="decimal" placeholder="8,00"></label>
+
+    <div class="purchase-add">
+      <div class="pt">Añadir compra de stock</div>
+      <div class="row2">
+        <label class="field" style="margin-bottom:0;"><span class="lbl">Unidades compradas</span><input type="number" id="fdNewQty" min="1" step="1" inputmode="numeric"></label>
+        <label class="field" style="margin-bottom:0;"><span class="lbl">Coste por unidad (€)</span><input type="number" id="fdNewCost" min="0" step="0.1" inputmode="decimal"></label>
+      </div>
+      <button class="primary" id="fdAddPurchase" style="width:100%; margin-top:12px;">Añadir compra</button>
+    </div>
+
+    <div class="section-title" style="margin-top:0;"><span>Historial de compras</span></div>
+    <div class="purchase-list" id="fdPurchaseList"></div>
+
+    <div class="sheet-actions" style="margin-top:16px;">
+      <button class="secondary" id="fdClose" style="flex:1;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet: meter stock de golpe a todos los sabores -->
+<div class="overlay" id="overlayBulk">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Meter stock de golpe</h2>
+    <div class="hint" style="margin-top:-2px;">Añade la misma compra (unidades + coste por unidad) a los 30 sabores a la vez. Después puedes afinar cada uno tocándolo en la lista.</div>
+    <label class="field"><span class="lbl">Unidades por sabor</span><input type="number" id="bulkQty" min="1" step="1" inputmode="numeric" placeholder="ej. 10"></label>
+    <label class="field"><span class="lbl">Coste por unidad (€)</span><input type="number" id="bulkCost" min="0" step="0.1" inputmode="decimal" placeholder="ej. 4,50"></label>
+    <div class="sheet-actions">
+      <button class="secondary" id="bulkCancel">Cancelar</button>
+      <button class="primary" id="bulkConfirm">Aplicar a los 30 sabores</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet: añadir gasto general -->
+<div class="overlay" id="overlayExpense">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Añadir gasto general</h2>
+    <div class="hint" style="margin-top:-2px;">Envíos, bolsas, comisiones... cualquier gasto que no sea de un sabor en concreto.</div>
+    <label class="field"><span class="lbl">Concepto</span><input type="text" id="expConcept" placeholder="ej. Envío del pedido"></label>
+    <label class="field"><span class="lbl">Importe (€)</span><input type="number" id="expAmount" min="0" step="0.5" inputmode="decimal"></label>
+    <div class="sheet-actions">
+      <button class="secondary" id="expCancel">Cancelar</button>
+      <button class="primary" id="expConfirm">Guardar gasto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet: ajustes -->
+<div class="overlay" id="overlaySettings">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Ajustes</h2>
+    <label class="field"><span class="lbl">Contraseña de acceso a la web</span><input type="text" id="setPassword" placeholder="Contraseña"></label>
+    <label class="field"><span class="lbl">PIN de 4 dígitos para volver desde el modo cliente</span><input type="text" id="setPin" maxlength="4" inputmode="numeric" placeholder="1234"></label>
+    <div class="sheet-actions">
+      <button class="secondary" id="setCancel">Cancelar</button>
+      <button class="primary" id="setConfirm">Guardar</button>
+    </div>
+    <button class="danger-block" id="resetAllBtn">Borrar todo el stock y ventas</button>
+  </div>
+</div>
+
+<!-- Sheet: PIN para volver -->
+<div class="overlay" id="overlayPin">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h2>Introduce el PIN</h2>
+    <div class="sheet-sub">Para volver al panel del negocio</div>
+    <div class="pin-dots" id="pinDots"><span></span><span></span><span></span><span></span></div>
+    <div class="keypad" id="pinKeypad"></div>
+    <div class="sheet-actions" style="margin-top:16px;">
+      <button class="secondary" id="pinCancel" style="flex:1;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var FLAVORS = [
+    "Cherry Lemon", "Kiwi Passion Fruit Guava", "Love 66", "Watermelon Ice",
+    "Strawberry Kiwi", "Lemon Lime", "Strawberry Banana", "Black Ice Dragon Fruit Strawberry",
+    "Peach Berry", "Strawberry Watermelon", "Cherry Cola", "Grape Burst",
+    "Mixed Berry", "Blueberry Sour Raspberry", "Peach Mango Pineapple", "Pina Colada",
+    "Sex On The Beach", "Fizzy Cherry", "Monster Mango", "Pink Lemonade",
+    "Cotton Candy", "Coco Loco", "Triple Melon", "Strawberry Redbull Ice",
+    "Mint Ice", "Strawberry Mango", "Lemon Mint", "Blue Razz Cherry Ice",
+    "Happy Ranch", "Melon Pineapple Banana"
+  ];
+
+  var FLAVOR_COLOR = [
+    "#FF5C7A", "#8BC34A", "#FF4FA3", "#2FD98A",
+    "#FF6F91", "#D4E157", "#FF8FA3", "#C44DFF",
+    "#FF9F6B", "#FF6B81", "#B5453A", "#9B5DE5",
+    "#7B2CBF", "#5E60CE", "#FFB703", "#FFE066",
+    "#FF7F50", "#E63950", "#FF9F1C", "#FF6FB5",
+    "#C9A8FF", "#E8C79E", "#6FCF97", "#FF5C93",
+    "#4DD9C4", "#FF8552", "#B9E88A", "#4D7CFF",
+    "#FFB84D", "#B4E33D"
+  ];
+
+  var FLAVOR_EMOJI = [
+    "🍒", "🥝", "❤️", "🍉",
+    "🍓", "🍋", "🍌", "🐉",
+    "🍑", "🍓", "🥤", "🍇",
+    "🫐", "🫐", "🥭", "🍍",
+    "🏖️", "🍒", "🥭", "🍋",
+    "🍬", "🥥", "🍈", "🧊",
+    "🌿", "🍓", "🌿", "🫐",
+    "🤠", "🍈"
+  ];
+
+  var STORE_KEY = "vapers_stock_v2";
+  var LOW_STOCK_THRESHOLD = 5;
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function loadState() {
+    var fallback = { flavors: {}, sales: [], expenses: [], clientPin: "1234", appPassword: "oxford15k" };
+    FLAVORS.forEach(function (f) { fallback.flavors[f] = { purchases: [], salePrice: 0 }; });
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return fallback;
+      if (!parsed.flavors) parsed.flavors = {};
+      FLAVORS.forEach(function (f) {
+        if (!parsed.flavors[f]) parsed.flavors[f] = { purchases: [], salePrice: 0 };
+        if (!Array.isArray(parsed.flavors[f].purchases)) parsed.flavors[f].purchases = [];
+        if (typeof parsed.flavors[f].salePrice !== "number") parsed.flavors[f].salePrice = 0;
+      });
+      if (!Array.isArray(parsed.sales)) parsed.sales = [];
+      if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
+      if (typeof parsed.clientPin !== "string" || !parsed.clientPin) parsed.clientPin = "1234";
+      if (typeof parsed.appPassword !== "string" || !parsed.appPassword) parsed.appPassword = "oxford15k";
+      return parsed;
+    } catch (e) { return fallback; }
+  }
+
+  function saveState() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+    catch (e) { showToast("No se pudo guardar. Revisa el espacio del navegador.", true); }
+  }
+
+  var state = loadState();
+
+  function fmtEUR(n) {
+    var v = Math.round((n + Number.EPSILON) * 100) / 100;
+    return v.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  }
+  function fmtNum(n, d) {
+    return n.toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  /* ---- Cálculos ---- */
+  function totalBought(f) { return state.flavors[f].purchases.reduce(function (a, p) { return a + p.qty; }, 0); }
+  function totalCost(f) { return state.flavors[f].purchases.reduce(function (a, p) { return a + p.qty * p.unitCost; }, 0); }
+  function avgUnitCost(f) { var b = totalBought(f); return b > 0 ? totalCost(f) / b : 0; }
+  function soldOf(f) { return state.sales.filter(function (s) { return s.flavor === f; }).reduce(function (a, s) { return a + s.qty; }, 0); }
+  function remainingOf(f) { return totalBought(f) - soldOf(f); }
+  function revenueOf(f) { return state.sales.filter(function (s) { return s.flavor === f; }).reduce(function (a, s) { return a + s.qty * s.price; }, 0); }
+  function profitOf(f) { return revenueOf(f) - avgUnitCost(f) * soldOf(f); }
+  function expensesTotal() { return state.expenses.reduce(function (a, e) { return a + e.amount; }, 0); }
+
+  function totals() {
+    var stockCost = 0, revenue = 0, stock = 0;
+    FLAVORS.forEach(function (f) { stockCost += totalCost(f); revenue += revenueOf(f); stock += remainingOf(f); });
+    var extra = expensesTotal();
+    var invested = stockCost + extra;
+    return { stockCost: stockCost, extra: extra, invested: invested, revenue: revenue, profit: revenue - invested, stock: stock };
+  }
+
+  /* ---- Toast ---- */
+  var toastTimer = null;
+  var elToast = document.getElementById("toast");
+  function showToast(msg, isErr) {
+    elToast.textContent = msg;
+    elToast.className = "toast show" + (isErr ? " err" : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { elToast.classList.remove("show"); }, 2200);
+  }
+
+  /* ---- Render: resumen + sabores + gastos + historial ---- */
+  var els = {
+    statInvested: document.getElementById("statInvested"),
+    statRevenue: document.getElementById("statRevenue"),
+    statProfit: document.getElementById("statProfit"),
+    statStock: document.getElementById("statStock"),
+    investBreakdown: document.getElementById("investBreakdown"),
+    flavorList: document.getElementById("flavorList"),
+    flavorCount: document.getElementById("flavorCount"),
+    expenseList: document.getElementById("expenseList"),
+    historyList: document.getElementById("historyList"),
+    sellFlavor: document.getElementById("sellFlavor"),
+    sellQty: document.getElementById("sellQty"),
+    sellPrice: document.getElementById("sellPrice"),
+    sellStockHint: document.getElementById("sellStockHint"),
+    clientGrid: document.getElementById("clientGrid")
+  };
+
+  function render() {
+    var t = totals();
+    els.statInvested.textContent = fmtEUR(t.invested);
+    els.statRevenue.textContent = fmtEUR(t.revenue);
+    els.statProfit.textContent = fmtEUR(t.profit);
+    els.statProfit.className = "value " + (t.profit >= 0 ? "pos" : "neg");
+    els.statStock.textContent = t.stock + " uds";
+    els.flavorCount.textContent = FLAVORS.length + " sabores";
+    els.investBreakdown.innerHTML = "Compras de stock: <b>" + fmtEUR(t.stockCost) + "</b> · Gastos generales: <b>" + fmtEUR(t.extra) + "</b>";
+
+    renderFlavorList();
+    renderExpenseList();
+    renderHistory();
+    populateSellSelect();
+    renderClientGrid();
+  }
+
+  function renderFlavorList() {
+    els.flavorList.innerHTML = "";
+    FLAVORS.forEach(function (f, i) {
+      var remaining = remainingOf(f);
+      var sold = soldOf(f);
+      var bought = totalBought(f);
+      var avg = avgUnitCost(f);
+      var profit = profitOf(f);
+
+      var row = document.createElement("div");
+      row.className = "flavor-row";
+
+      var pillClass = "stock-pill";
+      if (remaining <= 0) pillClass += " out";
+      else if (remaining <= LOW_STOCK_THRESHOLD) pillClass += " low";
+
+      var subline = bought === 0
+        ? "Sin compras registradas"
+        : ("coste medio " + fmtNum(avg, 2) + " €/ud · vendidos " + sold + " · " +
+           '<span class="' + (profit >= 0 ? "prof-pos" : "prof-neg") + '">' + fmtEUR(profit) + "</span>");
+
+      row.innerHTML =
+        '<div class="fchip" style="background:' + FLAVOR_COLOR[i] + '22; color:' + FLAVOR_COLOR[i] + ';">' + FLAVOR_EMOJI[i] + '</div>' +
+        '<div class="fname"><div class="n">' + f + '</div><div class="m">' + subline + '</div></div>' +
+        '<div class="' + pillClass + '">' + (bought === 0 ? "—" : (remaining <= 0 ? "Agotado" : remaining + " uds")) + '</div>';
+
+      row.addEventListener("click", function () { openFlavorSheet(f); });
+      els.flavorList.appendChild(row);
+    });
+  }
+
+  function renderExpenseList() {
+    els.expenseList.innerHTML = "";
+    if (state.expenses.length === 0) {
+      els.expenseList.innerHTML = '<div class="empty-note">Sin gastos generales todavía. Añade envíos, bolsas u otros costes que no sean de un sabor concreto.</div>';
+      return;
+    }
+    var sorted = state.expenses.slice().sort(function (a, b) { return b.ts - a.ts; });
+    sorted.forEach(function (e) {
+      var row = document.createElement("div");
+      row.className = "expense-row";
+      var d = new Date(e.ts);
+      var dateStr = d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
+      row.innerHTML =
+        '<div class="en">' + e.concept + '<div class="ed">' + dateStr + '</div></div>' +
+        '<div class="ev">' + fmtEUR(e.amount) + '</div>' +
+        '<button class="row-del">×</button>';
+      row.querySelector(".row-del").addEventListener("click", function () {
+        state.expenses = state.expenses.filter(function (x) { return x.id !== e.id; });
+        saveState(); render();
+      });
+      els.expenseList.appendChild(row);
+    });
+  }
+
+  function renderHistory() {
+    els.historyList.innerHTML = "";
+    if (state.sales.length === 0) {
+      els.historyList.innerHTML = '<div class="empty-note">Todavía no has registrado ninguna venta.</div>';
+      return;
+    }
+    var sorted = state.sales.slice().sort(function (a, b) { return b.ts - a.ts; });
+    sorted.forEach(function (s) {
+      var item = document.createElement("div");
+      item.className = "history-item";
+      var date = new Date(s.ts);
+      var dateStr = date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) + " · " + date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+      item.innerHTML =
+        '<div><div class="hn">' + s.flavor + '</div><div class="hm">' + dateStr + '</div></div>' +
+        '<div class="hv">' + fmtEUR(s.qty * s.price) + '<span class="qty">' + s.qty + ' × ' + fmtNum(s.price, 2) + ' €</span></div>' +
+        '<button class="row-del">×</button>';
+      item.querySelector(".row-del").addEventListener("click", function () {
+        state.sales = state.sales.filter(function (x) { return x.id !== s.id; });
+        saveState(); render();
+        showToast("Venta eliminada, stock restaurado");
+      });
+      els.historyList.appendChild(item);
+    });
+  }
+
+  function populateSellSelect() {
+    var current = els.sellFlavor.value;
+    els.sellFlavor.innerHTML = "";
+    FLAVORS.forEach(function (f) {
+      var opt = document.createElement("option");
+      opt.value = f;
+      opt.textContent = f + " (" + remainingOf(f) + " uds)";
+      els.sellFlavor.appendChild(opt);
+    });
+    if (current && FLAVORS.indexOf(current) !== -1) els.sellFlavor.value = current;
+    updateSellHint();
+  }
+  function updateSellHint() {
+    var f = els.sellFlavor.value;
+    var remaining = remainingOf(f);
+    els.sellStockHint.textContent = "Stock disponible: " + remaining + " uds";
+    els.sellStockHint.className = remaining <= 0 ? "hint warn" : "hint";
+    var conf = state.flavors[f];
+    if (conf && conf.salePrice > 0 && !els.sellPrice.dataset.touched) {
+      els.sellPrice.value = conf.salePrice;
+    }
+  }
+
+  function chipHTML(f, i) {
+    var remaining = remainingOf(f);
+    var cls = "ok", valText = remaining + "", showLabel = true;
+    if (remaining <= 0) { cls = "out"; valText = "Agotado"; showLabel = false; }
+    else if (remaining <= LOW_STOCK_THRESHOLD) { cls = "low"; }
+    return '<div class="chip">' +
+      '<div class="swatchbar" style="background:' + FLAVOR_COLOR[i] + ';"></div>' +
+      '<div class="emo">' + FLAVOR_EMOJI[i] + '</div>' +
+      '<div class="fn">' + f + '</div>' +
+      '<div class="stockval ' + cls + '">' + valText + '</div>' +
+      (showLabel ? '<div class="stocklabel">uds</div>' : '') +
+      '</div>';
+  }
+
+  function renderClientGrid() {
+    var html = "";
+    FLAVORS.forEach(function (f, i) { html += chipHTML(f, i); });
+    els.clientGrid.innerHTML = html;
+  }
+
+  /* ---- Tabs ---- */
+  var tabBtns = document.querySelectorAll(".tab-btn");
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabBtns.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      var tab = btn.dataset.tab;
+      document.getElementById("tabFlavors").style.display = tab === "flavors" ? "" : "none";
+      document.getElementById("tabExpenses").style.display = tab === "expenses" ? "" : "none";
+      document.getElementById("tabHistory").style.display = tab === "history" ? "" : "none";
+    });
+  });
+
+  /* ---- Sheets: registrar venta ---- */
+  var overlaySell = document.getElementById("overlaySell");
+  document.getElementById("fabSell").addEventListener("click", function () {
+    els.sellQty.value = ""; els.sellPrice.value = ""; els.sellPrice.dataset.touched = "";
+    populateSellSelect();
+    overlaySell.classList.add("show");
+  });
+  document.getElementById("sellCancel").addEventListener("click", function () { overlaySell.classList.remove("show"); });
+  overlaySell.addEventListener("click", function (e) { if (e.target === overlaySell) overlaySell.classList.remove("show"); });
+  els.sellFlavor.addEventListener("change", updateSellHint);
+  els.sellPrice.addEventListener("input", function () { els.sellPrice.dataset.touched = "1"; });
+  document.getElementById("sellConfirm").addEventListener("click", function () {
+    var flavor = els.sellFlavor.value;
+    var qty = parseInt(els.sellQty.value, 10);
+    var price = parseFloat((els.sellPrice.value || "").toString().replace(",", "."));
+    if (!flavor || !qty || qty <= 0 || isNaN(price) || price < 0) { showToast("Rellena unidades y precio correctamente.", true); return; }
+    state.sales.push({ id: uid(), flavor: flavor, qty: qty, price: price, ts: Date.now() });
+    saveState(); render();
+    overlaySell.classList.remove("show");
+    showToast("Venta registrada: " + qty + " × " + flavor);
+  });
+
+  /* ---- Sheet: detalle de sabor ---- */
+  var overlayFlavor = document.getElementById("overlayFlavor");
+  var currentFlavor = null;
+
+  function openFlavorSheet(f) {
+    currentFlavor = f;
+    refreshFlavorSheet();
+    overlayFlavor.classList.add("show");
+  }
+  function refreshFlavorSheet() {
+    var f = currentFlavor;
+    if (!f) return;
+    var i = FLAVORS.indexOf(f);
+    var conf = state.flavors[f];
+    document.getElementById("fdTitle").innerHTML = FLAVOR_EMOJI[i] + " " + f;
+    document.getElementById("fdSub").textContent = totalBought(f) + " uds compradas en total";
+    document.getElementById("fdStock").textContent = remainingOf(f) + " uds";
+    document.getElementById("fdAvgCost").textContent = fmtEUR(avgUnitCost(f));
+    document.getElementById("fdSold").textContent = soldOf(f) + " uds";
+    var profitEl = document.getElementById("fdProfit");
+    var profit = profitOf(f);
+    profitEl.textContent = fmtEUR(profit);
+    profitEl.style.color = profit >= 0 ? "var(--o-mint)" : "var(--o-danger)";
+    document.getElementById("fdSalePrice").value = conf.salePrice || "";
+
+    var listEl = document.getElementById("fdPurchaseList");
+    listEl.innerHTML = "";
+    if (conf.purchases.length === 0) {
+      listEl.innerHTML = '<div class="empty-note" style="padding:10px;">Sin compras registradas. Añade la primera arriba.</div>';
+    } else {
+      conf.purchases.slice().sort(function (a, b) { return b.ts - a.ts; }).forEach(function (p) {
+        var d = new Date(p.ts);
+        var dateStr = d.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "2-digit" });
+        var row = document.createElement("div");
+        row.className = "purchase-item";
+        row.innerHTML =
+          '<div><div>' + p.qty + ' uds a ' + fmtNum(p.unitCost, 2) + ' €/ud</div><div class="pd">' + dateStr + '</div></div>' +
+          '<div class="pv">' + fmtEUR(p.qty * p.unitCost) + '</div>' +
+          '<button class="row-del">×</button>';
+        row.querySelector(".row-del").addEventListener("click", function () {
+          conf.purchases = conf.purchases.filter(function (x) { return x.id !== p.id; });
+          saveState(); refreshFlavorSheet(); render();
+        });
+        listEl.appendChild(row);
+      });
+    }
+  }
+  document.getElementById("fdClose").addEventListener("click", function () { overlayFlavor.classList.remove("show"); render(); });
+  overlayFlavor.addEventListener("click", function (e) { if (e.target === overlayFlavor) { overlayFlavor.classList.remove("show"); render(); } });
+
+  document.getElementById("fdAddPurchase").addEventListener("click", function () {
+    var qty = parseInt(document.getElementById("fdNewQty").value, 10);
+    var cost = parseFloat((document.getElementById("fdNewCost").value || "").toString().replace(",", "."));
+    if (!qty || qty <= 0 || isNaN(cost) || cost < 0) { showToast("Revisa unidades y coste por unidad.", true); return; }
+    state.flavors[currentFlavor].purchases.push({ id: uid(), qty: qty, unitCost: cost, ts: Date.now() });
+    saveState();
+    document.getElementById("fdNewQty").value = "";
+    document.getElementById("fdNewCost").value = "";
+    refreshFlavorSheet();
+    showToast("Compra añadida: " + qty + " uds");
+  });
+
+  document.getElementById("fdSalePrice").addEventListener("change", function (e) {
+    var v = parseFloat((e.target.value || "").toString().replace(",", "."));
+    state.flavors[currentFlavor].salePrice = isNaN(v) || v < 0 ? 0 : v;
+    saveState();
+  });
+
+  /* ---- Sheet: meter stock de golpe ---- */
+  var overlayBulk = document.getElementById("overlayBulk");
+  document.getElementById("bulkBtn").addEventListener("click", function () {
+    document.getElementById("bulkQty").value = "";
+    document.getElementById("bulkCost").value = "";
+    overlayBulk.classList.add("show");
+  });
+  document.getElementById("bulkCancel").addEventListener("click", function () { overlayBulk.classList.remove("show"); });
+  overlayBulk.addEventListener("click", function (e) { if (e.target === overlayBulk) overlayBulk.classList.remove("show"); });
+  document.getElementById("bulkConfirm").addEventListener("click", function () {
+    var qty = parseInt(document.getElementById("bulkQty").value, 10);
+    var cost = parseFloat((document.getElementById("bulkCost").value || "").toString().replace(",", "."));
+    if (!qty || qty <= 0 || isNaN(cost) || cost < 0) { showToast("Indica unidades y coste por unidad válidos.", true); return; }
+    var ts = Date.now();
+    FLAVORS.forEach(function (f) {
+      state.flavors[f].purchases.push({ id: uid(), qty: qty, unitCost: cost, ts: ts });
+    });
+    saveState(); render();
+    overlayBulk.classList.remove("show");
+    showToast("Stock añadido a los 30 sabores");
+  });
+
+  /* ---- Sheet: gastos generales ---- */
+  var overlayExpense = document.getElementById("overlayExpense");
+  document.getElementById("addExpenseBtn").addEventListener("click", function () {
+    document.getElementById("expConcept").value = "";
+    document.getElementById("expAmount").value = "";
+    overlayExpense.classList.add("show");
+  });
+  document.getElementById("expCancel").addEventListener("click", function () { overlayExpense.classList.remove("show"); });
+  overlayExpense.addEventListener("click", function (e) { if (e.target === overlayExpense) overlayExpense.classList.remove("show"); });
+  document.getElementById("expConfirm").addEventListener("click", function () {
+    var concept = document.getElementById("expConcept").value.trim();
+    var amount = parseFloat((document.getElementById("expAmount").value || "").toString().replace(",", "."));
+    if (!concept || isNaN(amount) || amount < 0) { showToast("Indica un concepto y un importe válido.", true); return; }
+    state.expenses.push({ id: uid(), concept: concept, amount: amount, ts: Date.now() });
+    saveState(); render();
+    overlayExpense.classList.remove("show");
+    showToast("Gasto añadido");
+  });
+
+  /* ---- Sheet: ajustes ---- */
+  var overlaySettings = document.getElementById("overlaySettings");
+  document.getElementById("settingsBtn").addEventListener("click", function () {
+    document.getElementById("setPin").value = state.clientPin;
+    document.getElementById("setPassword").value = state.appPassword;
+    overlaySettings.classList.add("show");
+  });
+  document.getElementById("setCancel").addEventListener("click", function () { overlaySettings.classList.remove("show"); });
+  overlaySettings.addEventListener("click", function (e) { if (e.target === overlaySettings) overlaySettings.classList.remove("show"); });
+  document.getElementById("setConfirm").addEventListener("click", function () {
+    var pin = document.getElementById("setPin").value.trim();
+    var pwd = document.getElementById("setPassword").value.trim();
+    if (!/^\d{4}$/.test(pin)) { showToast("El PIN debe tener 4 dígitos.", true); return; }
+    if (!pwd) { showToast("La contraseña no puede estar vacía.", true); return; }
+    state.clientPin = pin;
+    state.appPassword = pwd;
+    saveState();
+    overlaySettings.classList.remove("show");
+    showToast("Ajustes guardados");
+  });
+  document.getElementById("resetAllBtn").addEventListener("click", function () {
+    if (confirm("¿Borrar todo el stock, compras, gastos y ventas? Esta acción no se puede deshacer.")) {
+      state = { flavors: {}, sales: [], expenses: [], clientPin: state.clientPin };
+      FLAVORS.forEach(function (f) { state.flavors[f] = { purchases: [], salePrice: 0 }; });
+      saveState(); render();
+      overlaySettings.classList.remove("show");
+      showToast("Todo reiniciado");
+    }
+  });
+
+  /* ---- Modo cliente ---- */
+  var ownerView = document.getElementById("ownerView");
+  var clientView = document.getElementById("clientView");
+  document.getElementById("clientModeBtn").addEventListener("click", function () {
+    render();
+    ownerView.style.display = "none";
+    clientView.style.display = "block";
+  });
+
+  /* ---- PIN para volver ---- */
+  var overlayPin = document.getElementById("overlayPin");
+  var pinEntry = "";
+  var pinDotsEl = document.getElementById("pinDots");
+  var pinKeypadEl = document.getElementById("pinKeypad");
+
+  function buildKeypad() {
+    var keys = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
+    pinKeypadEl.innerHTML = "";
+    keys.forEach(function (k) {
+      var b = document.createElement("button");
+      b.textContent = k;
+      if (k === "") { b.style.visibility = "hidden"; }
+      else {
+        b.addEventListener("click", function () {
+          if (k === "⌫") { pinEntry = pinEntry.slice(0, -1); }
+          else if (pinEntry.length < 4) { pinEntry += k; }
+          updatePinDots();
+          if (pinEntry.length === 4) checkPin();
+        });
+      }
+      pinKeypadEl.appendChild(b);
+    });
+  }
+  buildKeypad();
+
+  function updatePinDots() {
+    var dots = pinDotsEl.querySelectorAll("span");
+    dots.forEach(function (d, idx) { d.classList.toggle("filled", idx < pinEntry.length); });
+  }
+  function checkPin() {
+    if (pinEntry === state.clientPin) {
+      overlayPin.classList.remove("show");
+      clientView.style.display = "none";
+      ownerView.style.display = "block";
+      pinEntry = ""; updatePinDots();
+    } else {
+      showToast("PIN incorrecto", true);
+      pinEntry = ""; updatePinDots();
+    }
+  }
+  document.getElementById("clientExitBtn").addEventListener("click", function () {
+    pinEntry = ""; updatePinDots();
+    overlayPin.classList.add("show");
+  });
+  document.getElementById("pinCancel").addEventListener("click", function () { overlayPin.classList.remove("show"); });
+  overlayPin.addEventListener("click", function (e) { if (e.target === overlayPin) overlayPin.classList.remove("show"); });
+
+  /* ---- Captura del catálogo para clientes ---- */
+  function browserDownload(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "catalogo-vapers.png";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    showToast("Imagen descargada");
+  }
+
+  function offerCapture(blob) {
+    if (window.claude && typeof window.claude.use === "function") {
+      window.claude.use("downloads").then(function (downloads) {
+        if (!downloads) { browserDownload(blob); return; }
+        downloads.save({ filename: "catalogo-vapers.png", data: blob }).then(function () {
+          showToast("Captura lista para enviar");
+        }).catch(function (err) {
+          if (err && err.code === "declined") return;
+          browserDownload(blob);
+        });
+      }).catch(function () { browserDownload(blob); });
+    } else {
+      browserDownload(blob);
+    }
+  }
+
+  document.getElementById("captureBtn").addEventListener("click", function () {
+    if (typeof html2canvas !== "function") { showToast("No se pudo cargar el generador de imágenes.", true); return; }
+    showToast("Generando captura...");
+    var clone = document.createElement("div");
+    clone.style.position = "fixed";
+    clone.style.left = "-99999px";
+    clone.style.top = "0";
+    clone.style.width = "940px";
+    clone.style.boxSizing = "border-box";
+    clone.style.padding = "26px 24px 22px";
+    clone.style.background = "linear-gradient(180deg, #FFE8B8 0%, #BDEBF6 45%, #EAF8FF 100%)";
+    var headHtml = '<div style="text-align:center; margin-bottom:16px;">' +
+      '<h1 style="font-size:26px; font-weight:800; margin:0; color:#23272b; letter-spacing:-0.02em;">🍓 Nuestros sabores</h1>' +
+      '<div style="font-size:13px; font-weight:600; color:#6b5a4a; margin-top:4px;">Stock disponible</div></div>';
+    var gridHtml = '<div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:9px;">';
+    FLAVORS.forEach(function (f, i) { gridHtml += chipHTML(f, i); });
+    gridHtml += '</div>';
+    clone.innerHTML = headHtml + gridHtml;
+    document.body.appendChild(clone);
+
+    html2canvas(clone, { backgroundColor: "#FFE8B8", scale: 2, useCORS: true }).then(function (canvas) {
+      document.body.removeChild(clone);
+      canvas.toBlob(function (blob) {
+        if (!blob) { showToast("No se pudo generar la imagen.", true); return; }
+        offerCapture(blob);
+      }, "image/png");
+    }).catch(function () {
+      if (clone.parentNode) document.body.removeChild(clone);
+      showToast("No se pudo generar la captura.", true);
+    });
+  });
+
+  /* ---- Pantalla de bloqueo ---- */
+  var LOCK_KEY = "vapers_unlocked_v2";
+  var lockOverlay = document.getElementById("lockOverlay");
+  function attemptUnlock() {
+    var val = document.getElementById("lockInput").value;
+    if (val === state.appPassword) {
+      try { localStorage.setItem(LOCK_KEY, "1"); } catch (e) {}
+      lockOverlay.style.display = "none";
+      document.getElementById("lockErr").style.display = "none";
+    } else {
+      document.getElementById("lockErr").style.display = "block";
+    }
+  }
+  document.getElementById("lockSubmit").addEventListener("click", attemptUnlock);
+  document.getElementById("lockInput").addEventListener("keydown", function (e) { if (e.key === "Enter") attemptUnlock(); });
+  try {
+    if (localStorage.getItem(LOCK_KEY) === "1") lockOverlay.style.display = "none";
+  } catch (e) {}
+
+  render();
+})();
+</script>
+</body>
+</html>
